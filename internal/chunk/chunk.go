@@ -130,27 +130,7 @@ func mergeChunks(chunks []Chunk) []Chunk {
 	return append([]Chunk{a}, mergeChunks(chunks[1:])...)
 }
 
-// ChunkDoc partitions markdown content into three distinct types of "chunks":
-//
-// - Markdown
-// - Inline LaTeX
-// - Block LaTeX
-//
-// Individual LaTeX chunks will include the contents of a properly formed block
-// or inline LaTeX, e.g:
-//
-// $$\begin{equation} a^2 + b^2 = c^2 \end{equation}$$
-//
-// $$
-// x + y = z
-// $$
-//
-// or
-//
-// $\int_1^x x \; dx$
-//
-// While markdown blocks are contiguous blocks of non-LaTeX content.
-func ChunkDoc(md string) []Chunk {
+func partition(md string) []Chunk {
 	if strings.TrimSpace(md) == "" {
 		return []Chunk{}
 	}
@@ -178,4 +158,28 @@ func ChunkDoc(md string) []Chunk {
 	}
 
 	return mergeChunks(append(chunks, ChunkDoc(rem)...))
+}
+
+// ChunkDoc partitions markdown content into three distinct types of "chunks":
+//
+// - Markdown
+// - Inline LaTeX
+// - Block LaTeX
+//
+// Individual LaTeX chunks will include the contents of a properly formed block
+// or inline LaTeX, e.g:
+//
+// $$\begin{equation} a^2 + b^2 = c^2 \end{equation}$$
+//
+// $$
+// x + y = z
+// $$
+//
+// or
+//
+// $\int_1^x x \; dx$
+//
+// While markdown blocks are contiguous blocks of non-LaTeX content.
+func ChunkDoc(md string) []Chunk {
+	return mergeChunks(partition(md))
 }
