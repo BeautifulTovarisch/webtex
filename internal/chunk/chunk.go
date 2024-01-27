@@ -2,7 +2,7 @@
 package chunk
 
 import (
-	// "fmt"
+	"fmt"
 	"strings"
 	"unicode"
 )
@@ -44,21 +44,17 @@ func chunkType(str string) ChunkType {
 		return MD
 	}
 
-	a, b := str[0], str[1]
+	fmt.Println(str)
 
-	if a == '$' {
-		if unicode.IsSpace(rune(b)) {
-			return MD
-		}
-
+	if str[:2] == "$$" {
 		return BLOCK
 	}
 
-	if unicode.IsSpace(rune(a)) {
-		return MD
+	if str[0] == '$' && !unicode.IsSpace(rune(str[1])) {
+		return INLINE
 	}
 
-	return INLINE
+	return MD
 }
 
 // Read a valid Block LaTeX or treat as Markdown.
@@ -83,7 +79,7 @@ func readBlock(str string) (Chunk, string) {
 
 	// Whitespace before '$$'. Treating as Markdown. Newlines allowed.
 	if preceding != '\n' && unicode.IsSpace(rune(preceding)) {
-		return Chunk{MD, "$" + str}, ""
+		return Chunk{MD, "$" + str}, str[end+2:]
 	}
 
 	// +2 to skip past the delimiter
@@ -92,7 +88,28 @@ func readBlock(str string) (Chunk, string) {
 
 // Read valid Inline LaTeX or treat as Markdown.
 func readInline(str string) (Chunk, string) {
-	return Chunk{}, ""
+	end := strings.Index(str, "$")
+
+	if end == 0 {
+		// This is an implementation bug, if two consecutive '$' appear, we should be
+		// reading a block.
+		panic(fmt.Sprintf("Implementation error: %s", str))
+	}
+
+	// Rest of document is markdown.
+	if end < 0 {
+		return Chunk{MD, str}, ""
+	}
+
+	preceding := str[end-1]
+
+	// Example: $x + y = 10 $
+	//                     ^
+	if unicode.IsSpace(rune(preceding)) {
+		return Chunk{MD, str}, str[end+1:]
+	}
+
+	return Chunk{INLINE, str[:end]}, str[end+1:]
 }
 
 // Read [str] into a Chunk labeled with the appropriate chunk type.
@@ -142,10 +159,10 @@ func partition(md string) []Chunk {
 	}
 
 	// Everything before '$' is markdown
-	markdown, rest := Chunk{MD, md[:start]}, md[start:]
+	markdown, candidate := Chunk{MD, md[:start]}, md[start:]
 
 	// '$' detected, so we have a candidate for a LaTeX block.
-	chunk, rem := readChunk(rest)
+	chunk, rem := readChunk(candidate)
 
 	var chunks []Chunk
 

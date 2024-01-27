@@ -26,6 +26,28 @@ func chunksEq(a, b []Chunk) bool {
 	return true
 }
 
+func testFiles(files []string, expected map[string][]Chunk, t *testing.T) {
+	for _, f := range files {
+		md, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		input := string(md)
+
+		actual := ChunkDoc(input)
+
+		v, ok := expected[filepath.Base(f)]
+		if !ok {
+			t.Fatalf("No input file corresponding to %s", f)
+		}
+
+		if !chunksEq(v, actual) {
+			t.Errorf("Expected: %v. Got: %v", v, actual)
+		}
+	}
+}
+
 func TestChunkDoc(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		md := ""
@@ -44,27 +66,10 @@ func TestChunkDoc(t *testing.T) {
 			"block-1.md": []Chunk{},
 			"block-2.md": []Chunk{Chunk{BLOCK, "a + b = c"}},
 			"block-3.md": []Chunk{Chunk{BLOCK, "\n\\begin{tabular}{c c c}\na & b & c \\\\\n\\end{tabular}\n"}},
+			"block-4.md": []Chunk{Chunk{BLOCK, "\n$x = 10$\n"}, Chunk{MD, "\n\n# Heading\n"}},
 		}
 
-		for _, f := range files {
-			md, err := os.ReadFile(f)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			input := string(md)
-
-			actual := ChunkDoc(input)
-
-			v, ok := expected[filepath.Base(f)]
-			if !ok {
-				t.Fatalf("No input file corresponding to %s", f)
-			}
-
-			if !chunksEq(v, actual) {
-				t.Errorf("Expected: %v. Got: %v", v, actual)
-			}
-		}
+		testFiles(files, expected, t)
 	})
 
 	t.Run("Malformed", func(t *testing.T) {
@@ -85,6 +90,16 @@ func TestChunkDoc(t *testing.T) {
 				t.Errorf("Expected %v. Got %v", expected, actual)
 			}
 		}
+	})
+
+	t.Run("Inline", func(t *testing.T) {
+		files, _ := filepath.Glob("testdata/inline-*")
+
+		expected := map[string][]Chunk{
+			"inline-1.md": []Chunk{Chunk{INLINE, "x + y = 10"}},
+		}
+
+		testFiles(files, expected, t)
 	})
 
 	t.Run("Heterogeneous", func(t *testing.T) {
