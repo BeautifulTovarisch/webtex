@@ -23,6 +23,16 @@ type Chunk struct {
 	Content string    // The raw contents of the chunk of text.
 }
 
+func (c Chunk) String() string {
+	t := map[ChunkType]string{
+		MD:     "Markdown",
+		BLOCK:  "Block",
+		INLINE: "Inline",
+	}
+
+	return fmt.Sprintf("{%s %s}", t[c.T], c.Content)
+}
+
 // Determine whether we should read an inline, block, or markdown section
 // based on the sequence characters following the first '$'.
 //
@@ -43,8 +53,6 @@ func chunkType(str string) ChunkType {
 	if len(str) < 2 {
 		return MD
 	}
-
-	fmt.Println(str)
 
 	if str[:2] == "$$" {
 		return BLOCK
@@ -117,6 +125,8 @@ func readChunk(str string) (Chunk, string) {
 	if str == "" {
 		return Chunk{MD, ""}, ""
 	}
+
+	// fmt.Println(chunkType(str), str)
 
 	switch rem := str[1:]; chunkType(str) {
 	case BLOCK:
