@@ -58,24 +58,29 @@ func chunkType(str string) ChunkType {
 }
 
 // Read a valid Block LaTeX or treat as Markdown.
+// This function should always receive a string beginning with a '$', which is
+// then sliced off to form the chunk.
 func readBlock(str string) (Chunk, string) {
 	end := strings.Index(str, "$$")
 
-	// No delimiter or space before ending $$
+	// Empty block ($$$$)
+	if end == 0 {
+		// We have an extra '$' to skip past here.
+		return Chunk{BLOCK, ""}, str[end+3:]
+	}
+
+	// No matching delimiter found. Treating as Markdown
 	if end < 0 {
-		// Add back the sliced off '$' now that we know it's not LaTeX
 		return Chunk{MD, "$" + str}, ""
 	}
 
-	// Invalid block, read up to and including the 'delimiters'
-	// TODO: Decide precisely what invalidates a block
+	// Whitespace before '$$'. Treating as Markdown
 	if str[end-1] == ' ' {
-		fmt.Println(str)
-		return Chunk{MD, "$" + str[:end+2]}, str[end+2:]
+		return Chunk{MD, "$" + str}, ""
 	}
 
 	// +2 to skip past the delimiter
-	return Chunk{BLOCK, str[:end]}, str[end+2:]
+	return Chunk{BLOCK, str[1:end]}, str[end+2:]
 }
 
 // Read valid Inline LaTeX or treat as Markdown.
@@ -123,13 +128,14 @@ func mergeChunks(chunks []Chunk) []Chunk {
 }
 
 func ChunkDoc(md string) []Chunk {
-	if md == "" {
+	if strings.TrimSpace(md) == "" {
 		return []Chunk{}
 	}
 
 	// First '$'
 	start := strings.Index(md, "$")
 	if start < 0 {
+		fmt.Println(md)
 		return []Chunk{Chunk{MD, md}}
 	}
 
@@ -138,5 +144,15 @@ func ChunkDoc(md string) []Chunk {
 
 	chunk, rem := readChunk(rest)
 
-	return mergeChunks(append([]Chunk{markdown, chunk}, ChunkDoc(rem)...))
+	var chunks []Chunk
+
+	if markdown.Content != "" {
+		chunks = append(chunks, markdown)
+	}
+
+	if chunk.Content != "" {
+		chunks = append(chunks, chunk)
+	}
+
+	return mergeChunks(append(chunks, ChunkDoc(rem)...))
 }

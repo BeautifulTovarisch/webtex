@@ -8,13 +8,17 @@ import (
 
 // TODO: Find or generate large MD files and read them from disk for tests.
 
+func chunkEq(a, b Chunk) bool {
+	return a.T == b.T && a.Content == b.Content
+}
+
 func chunksEq(a, b []Chunk) bool {
 	if len(a) != len(b) {
 		return false
 	}
 
 	for i, c := range a {
-		if c.T != b[i].T || c.Content != b[i].Content {
+		if !chunkEq(c, b[i]) {
 			return false
 		}
 	}
@@ -34,35 +38,37 @@ func TestChunkDoc(t *testing.T) {
 	})
 
 	t.Run("Block", func(t *testing.T) {
-		validBlocks := []string{
-			// Valid LaTeX in Obsidian, although breaks formatting.
-			// `$$$$`,
-			`$$a + b = c$$`,
-			`$$
-      \begin{tabular}{c c c}
-      a & b & c
-      \end{tabular}
-      $$`,
+		files, _ := filepath.Glob("testdata/block-*")
+
+		expected := map[string][]Chunk{
+			"block-1.md": []Chunk{},
+			"block-2.md": []Chunk{Chunk{BLOCK, "a + b = c"}},
+			"block-3.md": []Chunk{Chunk{BLOCK, "\n\\begin{tabular}{c c c}\na & b & c \\\\\n\\end{tabular}\n"}},
 		}
 
-		expected := [][]Chunk{
-			// []Chunk{Chunk{BLOCK, ""}},
-			[]Chunk{Chunk{BLOCK, "a + b = c"}},
-			[]Chunk{Chunk{BLOCK, "\n\\begin{tabular}{c c c}\na & b & c\n\\end{tabular}\n"}},
-		}
+		for _, f := range files {
+			md, err := os.ReadFile(f)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		for i, block := range validBlocks {
-			if actual := ChunkDoc(block); !chunksEq(actual, expected[i]) {
-				t.Errorf("Expected: %v. Got %v", expected[i], actual)
+			input := string(md)
+
+			actual := ChunkDoc(input)
+
+			v, ok := expected[filepath.Base(f)]
+			if !ok {
+				t.Fatalf("No input file corresponding to %s", f)
+			}
+
+			if !chunksEq(v, actual) {
+				t.Errorf("Expected: %v. Got: %v", v, actual)
 			}
 		}
 	})
 
 	t.Run("Malformed", func(t *testing.T) {
-		matches, err := filepath.Glob("testdata/malformed-*")
-		if err != nil {
-			t.Error(err)
-		}
+		matches, _ := filepath.Glob("testdata/malformed-*")
 
 		for _, f := range matches {
 			md, err := os.ReadFile(f)
