@@ -2,8 +2,9 @@
 package chunk
 
 import (
-	"fmt"
+	// "fmt"
 	"strings"
+	"unicode"
 )
 
 // ChunkType represents the nature of the contiguous block of content contained
@@ -39,22 +40,25 @@ type Chunk struct {
 // $a + b = c $   => Markdown
 // $              => Markdown (no terminating $)
 func chunkType(str string) ChunkType {
-	if str == "" || len(str) < 2 {
+	if len(str) < 2 {
 		return MD
 	}
 
-	switch str[0] {
-	case '$':
-		if c := str[1]; c == ' ' {
+	a, b := str[0], str[1]
+
+	if a == '$' {
+		if unicode.IsSpace(rune(b)) {
 			return MD
 		}
 
 		return BLOCK
-	case ' ':
-		return MD
-	default:
-		return INLINE
 	}
+
+	if unicode.IsSpace(rune(a)) {
+		return MD
+	}
+
+	return INLINE
 }
 
 // Read a valid Block LaTeX or treat as Markdown.
@@ -65,7 +69,7 @@ func readBlock(str string) (Chunk, string) {
 
 	// Empty block ($$$$)
 	if end == 0 {
-		// We have an extra '$' to skip past here.
+		// Skip past the extra '$'
 		return Chunk{BLOCK, ""}, str[end+3:]
 	}
 
@@ -74,8 +78,11 @@ func readBlock(str string) (Chunk, string) {
 		return Chunk{MD, "$" + str}, ""
 	}
 
-	// Whitespace before '$$'. Treating as Markdown
-	if str[end-1] == ' ' {
+	// The character immediately preceding the end delimiter
+	preceding := str[end-1]
+
+	// Whitespace before '$$'. Treating as Markdown. Newlines allowed.
+	if preceding != '\n' && unicode.IsSpace(rune(preceding)) {
 		return Chunk{MD, "$" + str}, ""
 	}
 
@@ -105,11 +112,7 @@ func readChunk(str string) (Chunk, string) {
 	}
 }
 
-// Due to limitations in the partitioning scheme, we may obtain chunks of the
-// same type adjacent in the same list. It is safe to merge their contents into
-// a single chunk and continue.
-//
-// TODO: Find a way to avoid adding unnecessary blocks.
+// merge adjacent markdown chunks.
 func mergeChunks(chunks []Chunk) []Chunk {
 	if len(chunks) < 2 {
 		return chunks
@@ -117,7 +120,7 @@ func mergeChunks(chunks []Chunk) []Chunk {
 
 	a, b := chunks[0], chunks[1]
 
-	if a.T == b.T {
+	if a.T == MD && b.T == MD {
 		merged := Chunk{a.T, a.Content + b.Content}
 		newChunks := append([]Chunk{merged}, chunks[2:]...)
 
@@ -127,6 +130,26 @@ func mergeChunks(chunks []Chunk) []Chunk {
 	return append([]Chunk{a}, mergeChunks(chunks[1:])...)
 }
 
+// ChunkDoc partitions markdown content into three distinct types of "chunks":
+//
+// - Markdown
+// - Inline LaTeX
+// - Block LaTeX
+//
+// Individual LaTeX chunks will include the contents of a properly formed block
+// or inline LaTeX, e.g:
+//
+// $$\begin{equation} a^2 + b^2 = c^2 \end{equation}$$
+//
+// $$
+// x + y = z
+// $$
+//
+// or
+//
+// $\int_1^x x \; dx$
+//
+// While markdown blocks are contiguous blocks of non-LaTeX content.
 func ChunkDoc(md string) []Chunk {
 	if strings.TrimSpace(md) == "" {
 		return []Chunk{}
@@ -135,13 +158,13 @@ func ChunkDoc(md string) []Chunk {
 	// First '$'
 	start := strings.Index(md, "$")
 	if start < 0 {
-		fmt.Println(md)
 		return []Chunk{Chunk{MD, md}}
 	}
 
 	// Everything before '$' is markdown
 	markdown, rest := Chunk{MD, md[:start]}, md[start:]
 
+	// '$' detected, so we have a candidate for a LaTeX block.
 	chunk, rem := readChunk(rest)
 
 	var chunks []Chunk
