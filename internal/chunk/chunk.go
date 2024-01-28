@@ -1,6 +1,10 @@
 // package chunk partitions text into markdown and LaTeX blocks.
 package chunk
 
+// TODO: Procedure to handle duplicative logic for finding end delimiters
+// TODO: Procedure to correctly compute the index of a substr occurring after
+// some index
+
 import (
 	"fmt"
 	"strings"
@@ -103,6 +107,37 @@ func readInline(str string) (Chunk, string) {
 	return Chunk{INLINE, str[1 : end+1]}, str[end+2:]
 }
 
+// If a fence marker is found, all content until the matching delimiter will be
+// treated as markdown. If no terminated delimiter is found, read until the end
+// of the document.
+func readFence(str string) (Chunk, string) {
+	// Empty or non-terminated fence (``)
+	if len(str) < 3 {
+		return Chunk{MD, str}, ""
+	}
+
+	if str[1] != '`' {
+		end := strings.Index(str[1:], "`")
+		if end < 0 {
+			return Chunk{MD, str}, ""
+		}
+
+		return Chunk{MD, str[:end+1]}, str[end+1:]
+	}
+
+	if str[:3] == "```" {
+		end := strings.Index(str[3:], "```")
+		// non-terminated fence
+		if end < 0 {
+			return Chunk{MD, str}, ""
+		}
+
+		return Chunk{MD, str[:end+3]}, str[end+3:]
+	}
+
+	panic(fmt.Sprintf("readFence unhandled case: %s", str))
+}
+
 // merge adjacent markdown chunks.
 func mergeChunks(chunks []Chunk) []Chunk {
 	if len(chunks) < 2 {
@@ -121,9 +156,8 @@ func mergeChunks(chunks []Chunk) []Chunk {
 	return append([]Chunk{a}, mergeChunks(chunks[1:])...)
 }
 
-// Each recursive call, consider the first non-whitespace character.
-// If we encounter a '$', we check whether we have LaTeX, and then whether its
-// inline or a block.
+// Each recursive call, check the first character to determine which type of
+// content to read.
 func partition(md string) []Chunk {
 	if strings.TrimSpace(md) == "" {
 		return []Chunk{}
@@ -146,8 +180,8 @@ func partition(md string) []Chunk {
 			c, rem = readMd(md)
 		}
 	case '`':
-		// Check for fence
-		c, rem = Chunk{}, ""
+		// Check for fence. This is almost identical to reading latex sections.
+		c, rem = readFence(md)
 	default:
 		// Markdown
 		c, rem = readMd(md)

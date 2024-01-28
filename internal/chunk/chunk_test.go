@@ -4,8 +4,10 @@ package chunk
 // TODO: Write proper diffing algorithm(s)
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -29,6 +31,26 @@ func chunksEq(a, b []Chunk) bool {
 	return true
 }
 
+func diffTable(a, b string, t *testing.T) {
+	var buf strings.Builder
+
+	n := len(b)
+
+	fmt.Fprintf(&buf, "\nDIFF\n")
+
+	for i, c1 := range a {
+		if i < n {
+			if c2 := b[i]; c1 != rune(c2) {
+				// Highlight row as red
+				fmt.Fprintf(&buf, "%q", '>')
+				fmt.Fprintf(&buf, "%+q\t%+q\n", c1, c2)
+			}
+		}
+	}
+
+	t.Log(buf.String())
+}
+
 // Chunk by chunk comparision
 func cmpChunk(expected, actual []Chunk, t *testing.T) {
 	if len(expected) == 0 && len(actual) == 0 {
@@ -50,6 +72,8 @@ func cmpChunk(expected, actual []Chunk, t *testing.T) {
 
 	if !chunkEq(a, b) {
 		t.Errorf("Expected: %v\n\nActual: %v\n\n", a, b)
+
+		diffTable(a.Content, b.Content, t)
 
 		return
 	}
@@ -132,6 +156,16 @@ func TestChunkDoc(t *testing.T) {
 
 		expected := map[string][]Chunk{
 			"inline-1.md": []Chunk{Chunk{INLINE, "x + y = 10"}},
+		}
+
+		testFiles(files, expected, t)
+	})
+
+	t.Run("Fence", func(t *testing.T) {
+		files, _ := filepath.Glob("testdata/fence-*")
+
+		expected := map[string][]Chunk{
+			"fence-1.md": []Chunk{Chunk{MD, "```python\ndef fib(n):\n    if n <= 1:\n        return 1\n\n    return fib(n-1) + fib(n-2)\n```\n"}},
 		}
 
 		testFiles(files, expected, t)
