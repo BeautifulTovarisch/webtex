@@ -60,14 +60,31 @@ func checkType(str string) ChunkType {
 	}
 }
 
-// Read until '$'
+// Read until '$' or '`'
 func readMd(str string) (Chunk, string) {
-	end := strings.Index(str[1:], "$")
-	if end < 0 {
+	fence := strings.Index(str[1:], "`")
+	dollar := strings.Index(str[1:], "$")
+
+	// No matching delimiters
+	if dollar < 0 && fence < 0 {
 		return Chunk{MD, str}, ""
 	}
 
-	return Chunk{MD, str[:end+1]}, str[end+1:]
+	// There must be either a dollar or a fence
+	// TODO: Simplify these cases.
+	if dollar < 0 {
+		return Chunk{MD, str[:fence]}, str[fence+1:]
+	}
+
+	if fence < 0 {
+		return Chunk{MD, str[:dollar+1]}, str[dollar+1:]
+	}
+
+	if fence < dollar {
+		return Chunk{MD, str[:fence]}, str[fence+1:]
+	}
+
+	return Chunk{MD, str[:dollar+1]}, str[dollar+1:]
 }
 
 // Read until terminating '$$' or end of document. Anything after a '$$' is a
@@ -100,8 +117,10 @@ func readInline(str string) (Chunk, string) {
 
 	// Example: $x + y = 10 $
 	//                     ^
+	// We only know for sure that the characters up until the 2nd '$' are MD. The
+	// 2nd '$' may start a valid inline block, etc.
 	if unicode.IsSpace(rune(preceding)) {
-		return Chunk{MD, str[:end+2]}, str[end+2:]
+		return Chunk{MD, str[:end+1]}, str[end+1:]
 	}
 
 	return Chunk{INLINE, str[1 : end+1]}, str[end+2:]
@@ -116,15 +135,6 @@ func readFence(str string) (Chunk, string) {
 		return Chunk{MD, str}, ""
 	}
 
-	if str[1] != '`' {
-		end := strings.Index(str[1:], "`")
-		if end < 0 {
-			return Chunk{MD, str}, ""
-		}
-
-		return Chunk{MD, str[:end+1]}, str[end+1:]
-	}
-
 	if str[:3] == "```" {
 		end := strings.Index(str[3:], "```")
 		// non-terminated fence
@@ -133,6 +143,15 @@ func readFence(str string) (Chunk, string) {
 		}
 
 		return Chunk{MD, str[:end+3]}, str[end+3:]
+	}
+
+	if str[1] != '`' {
+		end := strings.Index(str[1:], "`")
+		if end < 0 {
+			return Chunk{MD, str}, ""
+		}
+
+		return Chunk{MD, str[:end+1]}, str[end+1:]
 	}
 
 	panic(fmt.Sprintf("readFence unhandled case: %s", str))

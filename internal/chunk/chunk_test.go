@@ -31,19 +31,40 @@ func chunksEq(a, b []Chunk) bool {
 	return true
 }
 
+func diffStrings(expected, actual string, t *testing.T) {
+	var buf strings.Builder
+
+	fmt.Fprintf(&buf, "\nEXPECTED\n")
+	for _, c := range expected {
+		fmt.Fprintf(&buf, "%+q", c)
+	}
+
+	buf.WriteRune('\n')
+
+	fmt.Fprintf(&buf, "\nACTUAL\n")
+	for _, c := range actual {
+		fmt.Fprintf(&buf, "%+q", c)
+	}
+
+	buf.WriteRune('\n')
+
+	t.Log(buf.String())
+}
+
+// Extremely poor parameter names...
 func diffTable(a, b string, t *testing.T) {
 	var buf strings.Builder
 
 	n := len(b)
 
-	fmt.Fprintf(&buf, "\nDIFF\n")
+	fmt.Fprintf(&buf, "\n\texp\tact\n")
 
 	for i, c1 := range a {
 		if i < n {
 			if c2 := b[i]; c1 != rune(c2) {
 				// Highlight row as red
-				fmt.Fprintf(&buf, "%q", '>')
-				fmt.Fprintf(&buf, "%+q\t%+q\n", c1, c2)
+				fmt.Fprintf(&buf, ">")
+				fmt.Fprintf(&buf, "\t%+q\t%+q\n", c1, c2)
 			}
 		}
 	}
@@ -73,7 +94,7 @@ func cmpChunk(expected, actual []Chunk, t *testing.T) {
 	if !chunkEq(a, b) {
 		t.Errorf("Expected: %v\n\nActual: %v\n\n", a, b)
 
-		diffTable(a.Content, b.Content, t)
+		diffStrings(a.Content, b.Content, t)
 
 		return
 	}
@@ -129,6 +150,9 @@ func TestChunkDoc(t *testing.T) {
 				Chunk{MD, "\n\n"},
 				Chunk{BLOCK, "\n\\begin{equation}\n$x + y = z$\n\\end{equation}\n"},
 			},
+			"block-6.md": []Chunk{
+				Chunk{BLOCK, "\n```\nprint(f'${var}')\n```\n"},
+			},
 		}
 
 		testFiles(files, expected, t)
@@ -144,7 +168,11 @@ func TestChunkDoc(t *testing.T) {
 				// Remember consecutive markdown blocks are merged!
 				Chunk{MD, "$x + y = z $\n$ "},
 				Chunk{INLINE, "100"},
-				Chunk{MD, "\n$x = -b \\pm \\frac {\\sqrt{b^2 - 4ac}} {2a}\n$"},
+				Chunk{MD, "\n$x = -b \\pm \\frac {\\sqrt{b^2 - 4ac}} {2a}\n$\n"},
+			},
+			"malformed-4.md": []Chunk{
+				Chunk{MD, "$100\n\n"},
+				Chunk{BLOCK, "\n10\n"},
 			},
 		}
 
@@ -166,6 +194,9 @@ func TestChunkDoc(t *testing.T) {
 
 		expected := map[string][]Chunk{
 			"fence-1.md": []Chunk{Chunk{MD, "```python\ndef fib(n):\n    if n <= 1:\n        return 1\n\n    return fib(n-1) + fib(n-2)\n```\n"}},
+			"fence-2.md": []Chunk{Chunk{MD, "`inline code block`\n"}},
+			"fence-3.md": []Chunk{Chunk{MD, "```\n$$\\begin{equation}a + b = c\\end{equation}$$\n```\n"}},
+			"fence-4.md": []Chunk{Chunk{MD, "`$x + y = z$`\n"}},
 		}
 
 		testFiles(files, expected, t)
@@ -184,6 +215,17 @@ func TestChunkDoc(t *testing.T) {
 				Chunk{BLOCK, "\n\\begin{equation}\nE_n(x) = \\frac 1 {n!} \\int_1^x (x - t)^n f^{(n+1)}(t) \\; dt\n\\end{equation}\n"},
 				Chunk{MD, "\n\n"},
 				Chunk{BLOCK, "\n\\begin{tabular}{c c c}\na & b & c \\\\\nd & e & f\n\\end{tabular}\n"},
+			},
+			"hetero-2.md": []Chunk{
+				Chunk{MD, "# Heading 1\n\n"},
+				Chunk{BLOCK, "\nx + y = z\n"},
+				Chunk{MD, "\n\n## Subheading 1\n\n"},
+				Chunk{BLOCK, "\n\\begin{tabular}{c c c}\na & b & c \\\\\nd & e & f\n\\end{tabular}\n"},
+				Chunk{MD, "\n\n## Subheading 2\n\nHere is some text. $100 is nothing to me, man \n\n"},
+				Chunk{BLOCK, "\n$P_\\omega={n_\\omega\\over 2}\\hbar\\omega\\,{1+R\\over 1-v^2}\\int\\limits_{-1}^{1}dx\\,(x-v)|x-v|,$\n"},
+				Chunk{MD, "\n\n"},
+				Chunk{BLOCK, "\n\\begin{tabular}{c c c}\ng & h & i \\\\\nj & k & l\n\\end{tabular}\n"},
+				Chunk{MD, "\n```python\n# This shouldn't be sent to the TeX server:\n'''\n$$\nx^2 + y^2 = z^2\n$$\n'''\n```\n"},
 			},
 		}
 
