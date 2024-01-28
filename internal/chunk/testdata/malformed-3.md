@@ -1,12 +1,4 @@
-# Heading 1
-
-This document contains no LaTeX
-
-## Sub Heading
-
-or even a single dollar sign.
-
-```python
-def add(a, b):
-    return a + b
-```
+$x + y = z $
+$ $100$
+$x = -b \pm \frac {\sqrt{b^2 - 4ac}} {2a}
+$

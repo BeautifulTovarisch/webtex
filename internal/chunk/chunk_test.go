@@ -29,18 +29,6 @@ func chunksEq(a, b []Chunk) bool {
 	return true
 }
 
-func cmpString(a, b string, t *testing.T) {
-	if len(a) == 0 && len(b) == 0 {
-		return
-	}
-
-	if c1, c2 := a[0], b[0]; c1 != c2 {
-		t.Errorf("%+q != %+q", c1, c2)
-	}
-
-	cmpString(a[1:], b[1:], t)
-}
-
 // Chunk by chunk comparision
 func cmpChunk(expected, actual []Chunk, t *testing.T) {
 	if len(expected) == 0 && len(actual) == 0 {
@@ -49,18 +37,21 @@ func cmpChunk(expected, actual []Chunk, t *testing.T) {
 	}
 
 	if len(expected) == 0 {
-		t.Errorf("Expected fewer chunks than received")
+		t.Errorf("Expected fewer chunks than received. Actual: %v\n", actual)
+		return
 	}
 
-	if len(expected) == 0 {
-		t.Errorf("Recieved fewer chunks then expected")
+	if len(actual) == 0 {
+		t.Errorf("Recieved fewer chunks then expected. Expected: %v\n", expected)
+		return
 	}
 
 	a, b := expected[0], actual[0]
 
 	if !chunkEq(a, b) {
 		t.Errorf("Expected: %v\n\nActual: %v\n\n", a, b)
-		cmpString(a.Content, b.Content, t)
+
+		return
 	}
 
 	cmpChunk(expected[1:], actual[1:], t)
@@ -79,7 +70,7 @@ func testFiles(files []string, expected map[string][]Chunk, t *testing.T) {
 
 		v, ok := expected[filepath.Base(f)]
 		if !ok {
-			t.Fatalf("No input file corresponding to %s", f)
+			t.Fatalf("No test case corresponding to %s", f)
 		}
 
 		cmpChunk(v, actual, t)
@@ -101,7 +92,7 @@ func TestChunkDoc(t *testing.T) {
 		files, _ := filepath.Glob("testdata/block-*")
 
 		expected := map[string][]Chunk{
-			"block-1.md": []Chunk{},
+			"block-1.md": []Chunk{Chunk{BLOCK, ""}},
 			"block-2.md": []Chunk{Chunk{BLOCK, "a + b = c"}},
 			"block-3.md": []Chunk{Chunk{BLOCK, "\n\\begin{tabular}{c c c}\na & b & c \\\\\n\\end{tabular}\n"}},
 			"block-4.md": []Chunk{
@@ -120,23 +111,20 @@ func TestChunkDoc(t *testing.T) {
 	})
 
 	t.Run("Malformed", func(t *testing.T) {
-		matches, _ := filepath.Glob("testdata/malformed-*")
+		files, _ := filepath.Glob("testdata/malformed-*")
 
-		for _, f := range matches {
-			md, err := os.ReadFile(f)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			input := string(md)
-
-			actual := ChunkDoc(input)
-			expected := []Chunk{Chunk{MD, input}}
-
-			if !chunksEq(expected, actual) {
-				t.Errorf("Expected %v. Got %v", expected, actual)
-			}
+		expected := map[string][]Chunk{
+			"malformed-1.md": []Chunk{Chunk{BLOCK, "\n\\begin{equation}\n\nMore text\n"}},
+			"malformed-2.md": []Chunk{Chunk{BLOCK, "\\begin{equation}x + y = z\\end{equation}$abc\n"}},
+			"malformed-3.md": []Chunk{
+				// Remember consecutive markdown blocks are merged!
+				Chunk{MD, "$x + y = z $\n$ "},
+				Chunk{INLINE, "100"},
+				Chunk{MD, "\n$x = -b \\pm \\frac {\\sqrt{b^2 - 4ac}} {2a}\n$"},
+			},
 		}
+
+		testFiles(files, expected, t)
 	})
 
 	t.Run("Inline", func(t *testing.T) {

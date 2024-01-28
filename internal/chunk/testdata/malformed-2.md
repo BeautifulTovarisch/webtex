@@ -1,1 +1,1 @@
-$$\begin{equation}x + y = z\end{equation} $$
+$$\begin{equation}x + y = z\end{equation}$abc

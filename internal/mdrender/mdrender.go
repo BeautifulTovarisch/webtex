@@ -8,7 +8,7 @@ import (
 // "github.com/gomarkdown/markdown/parser"
 )
 
-// MdToHTML accepts markdown and returns HTML
-func MdToHTML(md []byte) []byte {
-	return []byte{}
+// Render converts a markdown snippet into HTML
+func Render(md string) string {
+	return ""
 }
