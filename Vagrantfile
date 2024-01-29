@@ -4,7 +4,7 @@
 $go = <<-GO
 curl -L -O https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
 
-tar -C /usr/local -xvf go1.21.6.linux-amd64.tar.gz
+sudo tar -C /usr/local -xvf go1.21.6.linux-amd64.tar.gz
 
 echo 'export PATH=$PATH:/usr/local/go/bin' >> /home/vagrant/.bashrc
 GO
@@ -15,7 +15,7 @@ curl -L -O https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
 tar -xvf install-tl-unx.tar.gz
 
 # TODO: Find a cleaner way to do this.
-find . -type f -name "install-tl" -exec perl {} -profile /vagrant/texlive.profile \';'
+sudo find . -type f -name "install-tl" -exec perl {} -profile /vagrant/texlive.profile \';'
 
 echo 'export PATH=$PATH:/usr/local/texlive/2023/bin/x86_64-linux' >> /home/vagrant/.bashrc
 
@@ -39,11 +39,11 @@ Vagrant.configure("2") do |config|
   config.vm.provision "update", type: "shell", privileged: true, inline: "apt-get update -y"
   config.vm.provision "pdf2svg", type: "shell", privileged: true, inline: "apt-get install -y pdf2svg"
 
-  config.vm.provision "go", type: "shell", privileged: true do |s|
+  config.vm.provision "go", type: "shell", privileged: false do |s|
     s.inline = $go 
   end
 
-  config.vm.provision "tex", type: "shell", privileged: true do |s|
+  config.vm.provision "tex", type: "shell", privileged: false do |s|
     s.inline = $tex
   end
 

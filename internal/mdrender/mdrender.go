@@ -2,13 +2,39 @@
 package mdrender
 
 import (
-// "github.com/gomarkdown/markdown"
-// "github.com/gomarkdown/markdown/ast"
-// "github.com/gomarkdown/markdown/html"
-// "github.com/gomarkdown/markdown/parser"
+	"unsafe"
+
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/html"
+	"github.com/gomarkdown/markdown/parser"
 )
+
+const (
+	htmlFlags  = html.CommonFlags | html.HrefTargetBlank
+	extensions = parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
+)
+
+// Since we'll be potentially be converting a lot of markdown, we want to avoid
+// unnecessary copying.
+//
+// CAUTION: Mutating the []byte provided from this function will SEGSEV!
+func toString(b []byte) string {
+	return unsafe.String(unsafe.SliceData(b), len(b))
+}
+
+func mdToHtml(md []byte) string {
+	p := parser.NewWithExtensions(extensions)
+	renderer := html.NewRenderer(html.RendererOptions{Flags: htmlFlags})
+
+	ast := p.Parse(md)
+
+	return toString(markdown.Render(ast, renderer))
+}
 
 // Render converts a markdown snippet into HTML
 func Render(md string) string {
-	return ""
+	// Parse evidently modifies the []byte provided to it. Can't use our hack :(
+	mdBytes := []byte(md)
+
+	return mdToHtml(mdBytes)
 }

@@ -5,6 +5,10 @@
 // rendering the snippets of Markdown and LaTeX into corresponding HTML code
 package render
 
+// TODO: Our chunking strategy potentially allows documents to be streamed.
+// Consider an option to allow documents to be provided to STDIN directly and
+// processed in a pipeline.
+
 import (
 	"fmt"
 	"strings"
@@ -33,13 +37,10 @@ func renderTex(c chunk.Chunk) string {
 func assembleDoc(chunks []string) string {
 	var b strings.Builder
 	for _, c := range chunks {
-		fmt.Fprintf(&b, "%s", c)
+		b.WriteString(c)
 	}
 
 	return b.String()
-}
-
-func render(chunks []chunk.Chunk) {
 }
 
 // RenderDoc accepts a string containing an individual markdown document and
@@ -48,9 +49,6 @@ func RenderDoc(md string) string {
 	blocks := chunk.ChunkDoc(md)
 
 	fmt.Println(blocks)
+
 	return ""
 }
-
-// for each block in B
-//  go render MD|Block|Inline ?
-//  B[i] = <- render()
