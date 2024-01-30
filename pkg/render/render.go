@@ -34,9 +34,9 @@ func renderTex(c chunk.Chunk) string {
 	return texrender.Render(c.Content)
 }
 
-func assembleDoc(chunks []string) string {
+func assembleDoc(html []string) string {
 	var b strings.Builder
-	for _, c := range chunks {
+	for _, c := range html {
 		b.WriteString(c)
 	}
 
@@ -46,9 +46,18 @@ func assembleDoc(chunks []string) string {
 // RenderDoc accepts a string containing an individual markdown document and
 // returns an HTML document with the rendered content of [md].
 func RenderDoc(md string) string {
-	blocks := chunk.ChunkDoc(md)
+	chunks := chunk.ChunkDoc(md)
+	html := make([]string, len(chunks))
 
-	fmt.Println(blocks)
+	fmt.Println(chunks)
 
-	return ""
+	for _, c := range chunks {
+		if c.T == chunk.MD {
+			html = append(html, renderMd(c))
+		} else {
+			html = append(html, renderTex(c))
+		}
+	}
+
+	return assembleDoc(html)
 }

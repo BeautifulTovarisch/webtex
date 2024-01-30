@@ -1,6 +1,7 @@
 package render
 
 import (
+	"os"
 	"testing"
 )
 
@@ -8,22 +9,11 @@ import (
 // writing a diffing alg and potentially working up a lightweight snapshot tool
 func TestRenderDoc(t *testing.T) {
 	t.Run("Smoke", func(t *testing.T) {
-		doc := `
-    # Heading
+		doc, err := os.ReadFile("testdata/sample.md")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-    Some markdown text here
-
-    **bolded** _italics_
-
-    - Item 1
-    - Item 2
-      - SubItem 1
-      - SubItem 2
-    - Item 3
-
-    ## Subheading
-    `
-
-		RenderDoc(doc)
+		t.Log(RenderDoc(string(doc)))
 	})
 }

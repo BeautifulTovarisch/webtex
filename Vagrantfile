@@ -15,7 +15,7 @@ curl -L -O https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
 tar -xvf install-tl-unx.tar.gz
 
 # TODO: Find a cleaner way to do this.
-sudo find . -type f -name "install-tl" -exec perl {} -profile /vagrant/texlive.profile \';'
+find . -type f -name "install-tl" -exec perl {} -profile /vagrant/texlive.profile \';'
 
 echo 'export PATH=$PATH:/usr/local/texlive/2023/bin/x86_64-linux' >> /home/vagrant/.bashrc
 
@@ -43,7 +43,7 @@ Vagrant.configure("2") do |config|
     s.inline = $go 
   end
 
-  config.vm.provision "tex", type: "shell", privileged: false do |s|
+  config.vm.provision "tex", type: "shell", privileged: true do |s|
     s.inline = $tex
   end
 
