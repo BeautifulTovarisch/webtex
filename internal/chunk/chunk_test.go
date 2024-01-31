@@ -118,6 +118,8 @@ func testFiles(files []string, expected map[string][]Chunk, t *testing.T) {
 			t.Fatalf("No test case corresponding to %s", f)
 		}
 
+		t.Logf("Input file: %s\n", f)
+
 		cmpChunk(v, actual, t)
 	}
 }
@@ -193,10 +195,10 @@ func TestChunkDoc(t *testing.T) {
 		files, _ := filepath.Glob("testdata/fence-*")
 
 		expected := map[string][]Chunk{
-			"fence-1.md": []Chunk{Chunk{MD, "```python\ndef fib(n):\n    if n <= 1:\n        return 1\n\n    return fib(n-1) + fib(n-2)\n```\n"}},
-			"fence-2.md": []Chunk{Chunk{MD, "`inline code block`\n"}},
-			"fence-3.md": []Chunk{Chunk{MD, "```\n$$\\begin{equation}a + b = c\\end{equation}$$\n```\n"}},
-			"fence-4.md": []Chunk{Chunk{MD, "`$x + y = z$`\n"}},
+			"fence-1.md": []Chunk{Chunk{MD, "```python\ndef fib(n):\n    if n <= 1:\n        return 1\n\n    return fib(n-1) + fib(n-2)\n```"}},
+			"fence-2.md": []Chunk{Chunk{MD, "`inline code block`"}},
+			"fence-3.md": []Chunk{Chunk{MD, "```\n$$\\begin{equation}a + b = c\\end{equation}$$\n```"}},
+			"fence-4.md": []Chunk{Chunk{MD, "`$x + y = z$`"}},
 		}
 
 		testFiles(files, expected, t)

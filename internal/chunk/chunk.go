@@ -167,7 +167,7 @@ func readFence(str string) (Chunk, string) {
 			return Chunk{MD, str}, ""
 		}
 
-		return Chunk{MD, str[:end+2]}, str[end+1:]
+		return Chunk{MD, str[:end+2]}, str[end+2:]
 	}
 
 	panic(fmt.Sprintf("readFence unhandled case: %s", str))
