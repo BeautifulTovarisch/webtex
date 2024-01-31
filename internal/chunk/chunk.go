@@ -60,6 +60,22 @@ func checkType(str string) ChunkType {
 	}
 }
 
+// Given [str] which begins with [delim], find the matching occurence of the
+// delimiter or return -1 if not found.
+func matchingDelim(str, delim string) int {
+	offset := len(delim)
+
+	if len(str) < offset {
+		return -1
+	}
+
+	if end := strings.Index(str[offset:], delim); end > -1 {
+		return end + offset
+	}
+
+	return -1
+}
+
 // Read until '$' or '`'
 func readMd(str string) (Chunk, string) {
 	fence := strings.Index(str[1:], "`")
@@ -142,7 +158,7 @@ func readFence(str string) (Chunk, string) {
 			return Chunk{MD, str}, ""
 		}
 
-		return Chunk{MD, str[:end+3]}, str[end+3:]
+		return Chunk{MD, str[:end+6]}, str[end+6:]
 	}
 
 	if str[1] != '`' {
@@ -151,7 +167,7 @@ func readFence(str string) (Chunk, string) {
 			return Chunk{MD, str}, ""
 		}
 
-		return Chunk{MD, str[:end+1]}, str[end+1:]
+		return Chunk{MD, str[:end+2]}, str[end+1:]
 	}
 
 	panic(fmt.Sprintf("readFence unhandled case: %s", str))

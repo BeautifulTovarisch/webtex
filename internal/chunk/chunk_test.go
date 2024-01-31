@@ -225,7 +225,7 @@ func TestChunkDoc(t *testing.T) {
 				Chunk{BLOCK, "\n$P_\\omega={n_\\omega\\over 2}\\hbar\\omega\\,{1+R\\over 1-v^2}\\int\\limits_{-1}^{1}dx\\,(x-v)|x-v|,$\n"},
 				Chunk{MD, "\n\n"},
 				Chunk{BLOCK, "\n\\begin{tabular}{c c c}\ng & h & i \\\\\nj & k & l\n\\end{tabular}\n"},
-				Chunk{MD, "\n```python\n# This shouldn't be sent to the TeX server:\n'''\n$$\nx^2 + y^2 = z^2\n$$\n'''\n```\n"},
+				Chunk{MD, "\n```python\n# This shouldn't be sent to the TeX server:\n'''\n$$\nx^2 + y^2 = z^2\n$$\n'''\n```"},
 			},
 			"hetero-3.md": []Chunk{
 				Chunk{MD, "# Heading 1\n\n"},
@@ -234,6 +234,8 @@ func TestChunkDoc(t *testing.T) {
 				Chunk{BLOCK, "\\begin{tabular}{c c c}\na & b & c \\\\\nd & e & f\n\\end{tabular}"},
 				Chunk{MD, "\n\n## Subheading 2\n\nHere is some text.\n\n"},
 				Chunk{BLOCK, "\n$P_\\omega={n_\\omega\\over 2}\\hbar\\omega\\,{1+R\\over 1-v^2}\\int\\limits_{-1}^{1}dx\\,(x-v)|x-v|,$\n"},
+				Chunk{MD, "\n```python\n# This shouldn't be sent to the TeX server:\n'''\n$$\nx^2 + y^2 = z^2\n$$\n'''\n```\n\n"},
+				Chunk{INLINE, "\\int_1^x \\frac 1 x \\; dx"},
 			},
 		}
 
