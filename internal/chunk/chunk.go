@@ -1,9 +1,7 @@
 // package chunk partitions text into markdown and LaTeX blocks.
 package chunk
 
-// TODO: Procedure to handle duplicative logic for finding end delimiters
-// TODO: Procedure to correctly compute the index of a substr occurring after
-// some index
+// TODO: Think about more elegant way to read the delimited content.
 
 import (
 	"fmt"
@@ -109,7 +107,7 @@ func readMd(str string) (Chunk, string) {
 // TODO: Consider supporting escaping dollar signs.
 func readBlock(str string) (Chunk, string) {
 	// The index will be the index of the next '$$' + 2 to accommodate the start
-	end := strings.Index(str[2:], "$$")
+	end := matchingDelim(str, "$$")
 
 	// No matching delimiter found. Read the rest of the document.
 	if end < 0 {
@@ -117,29 +115,29 @@ func readBlock(str string) (Chunk, string) {
 	}
 
 	// +2 to skip past the delimiter
-	return Chunk{BLOCK, str[2 : end+2]}, str[end+4:]
+	return Chunk{BLOCK, str[2:end]}, str[end+2:]
 }
 
 // Read valid Inline LaTeX or treat as Markdown.
 func readInline(str string) (Chunk, string) {
-	end := strings.Index(str[1:], "$")
+	end := matchingDelim(str, "$")
 
 	// Rest of document is markdown.
 	if end < 0 {
 		return Chunk{MD, str}, ""
 	}
 
-	preceding := str[end]
+	preceding := str[end-1]
 
 	// Example: $x + y = 10 $
 	//                     ^
 	// We only know for sure that the characters up until the 2nd '$' are MD. The
 	// 2nd '$' may start a valid inline block, etc.
 	if unicode.IsSpace(rune(preceding)) {
-		return Chunk{MD, str[:end+1]}, str[end+1:]
+		return Chunk{MD, str[:end]}, str[end:]
 	}
 
-	return Chunk{INLINE, str[1 : end+1]}, str[end+2:]
+	return Chunk{INLINE, str[1:end]}, str[end+1:]
 }
 
 // If a fence marker is found, all content until the matching delimiter will be

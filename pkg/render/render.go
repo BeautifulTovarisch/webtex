@@ -10,7 +10,7 @@ package render
 // processed in a pipeline.
 
 import (
-	"fmt"
+	// "fmt"
 	"strings"
 
 	"github.com/beautifultovarisch/webtex/internal/chunk"
@@ -48,8 +48,6 @@ func assembleDoc(html []string) string {
 func RenderDoc(md string) string {
 	chunks := chunk.ChunkDoc(md)
 	html := make([]string, len(chunks))
-
-	fmt.Println(chunks)
 
 	for _, c := range chunks {
 		if c.T == chunk.MD {
