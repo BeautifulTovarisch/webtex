@@ -31,8 +31,6 @@ func texWrapper(tex string) string {
 
 	b.WriteString("\n\\end{document}")
 
-	// logger.Log("\n%s\n", b.String())
-
 	return b.String()
 }
 

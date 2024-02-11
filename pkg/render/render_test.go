@@ -14,6 +14,6 @@ func TestRenderDoc(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		t.Log(RenderDoc(string(doc)))
+		RenderDoc(string(doc))
 	})
 }

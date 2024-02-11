@@ -10,7 +10,6 @@ package render
 // processed in a pipeline.
 
 import (
-	// "fmt"
 	"strings"
 
 	"github.com/beautifultovarisch/webtex/internal/chunk"

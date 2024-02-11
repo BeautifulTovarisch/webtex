@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	htmlFlags  = html.CommonFlags | html.HrefTargetBlank
+	htmlFlags  = html.CommonFlags | html.HrefTargetBlank | html.TOC
 	extensions = parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
 )
 
@@ -26,9 +26,9 @@ func mdToHtml(md []byte) string {
 	p := parser.NewWithExtensions(extensions)
 	renderer := html.NewRenderer(html.RendererOptions{Flags: htmlFlags})
 
-	ast := p.Parse(md)
+	doc := p.Parse(md)
 
-	return toString(markdown.Render(ast, renderer))
+	return toString(markdown.Render(doc, renderer))
 }
 
 // Render converts a markdown snippet into HTML
