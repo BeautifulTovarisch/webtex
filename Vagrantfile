@@ -4,7 +4,7 @@
 $go = <<-GO
 curl -L -O https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
 
-tar -C /usr/local -xvf go1.21.6.linux-amd64.tar.gz
+sudo tar -C /usr/local -xvf go1.21.6.linux-amd64.tar.gz
 
 echo 'export PATH=$PATH:/usr/local/go/bin' >> /home/vagrant/.bashrc
 GO
@@ -39,7 +39,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "update", type: "shell", privileged: true, inline: "apt-get update -y"
   config.vm.provision "pdf2svg", type: "shell", privileged: true, inline: "apt-get install -y pdf2svg"
 
-  config.vm.provision "go", type: "shell", privileged: true do |s|
+  config.vm.provision "go", type: "shell", privileged: false do |s|
     s.inline = $go 
   end
 
