@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/beautifultovarisch/webtex/internal/chunk"
+	"github.com/beautifultovarisch/webtex/internal/logger"
 	"github.com/beautifultovarisch/webtex/internal/mdrender"
 	"github.com/beautifultovarisch/webtex/internal/texrender"
 )
@@ -26,7 +27,7 @@ func renderMd(c chunk.Chunk) string {
 	return mdrender.Render(c.Content)
 }
 
-func renderTex(c chunk.Chunk) string {
+func renderTex(c chunk.Chunk) (string, error) {
 	if c.T == chunk.MD {
 		panic("Implementation error. Expected LaTeX chunk")
 	}
@@ -53,7 +54,13 @@ func RenderDoc(md string) string {
 		if c.T == chunk.MD {
 			html = append(html, renderMd(c))
 		} else {
-			html = append(html, renderTex(c))
+			svg, err := renderTex(c)
+			if err != nil {
+				logger.Error("Error rendering TeX: %s", err)
+				continue
+			}
+
+			html = append(html, svg)
 		}
 	}
 
