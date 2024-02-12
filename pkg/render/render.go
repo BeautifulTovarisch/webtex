@@ -34,34 +34,27 @@ func renderTex(c chunk.Chunk) (string, error) {
 	return texrender.Render(c.Content)
 }
 
-func assembleDoc(html []string) string {
-	var b strings.Builder
-	for _, c := range html {
-		b.WriteString(c)
-	}
-
-	return b.String()
-}
-
 // RenderDoc accepts a string containing an individual markdown document and
 // returns an HTML document with the rendered content of [md].
 func RenderDoc(md string) string {
+	var doc strings.Builder
+
 	chunks := chunk.ChunkDoc(md)
-	html := make([]string, len(chunks))
 
 	for _, c := range chunks {
 		if c.T == chunk.MD {
-			html = append(html, renderMd(c))
+			doc.WriteString(renderMd(c))
 		} else {
 			svg, err := renderTex(c)
 			if err != nil {
 				logger.Error("Error rendering TeX: %s", err)
+
 				continue
 			}
 
-			html = append(html, svg)
+			doc.WriteString(svg)
 		}
 	}
 
-	return assembleDoc(html)
+	return doc.String()
 }

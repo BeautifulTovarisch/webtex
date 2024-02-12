@@ -1,15 +1,16 @@
 package sitebuilder
 
 import (
+	"os"
 	"testing"
 )
 
 func TestHTMLDoc(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
-		HTMLDoc(Document{})
+		HTMLDoc(os.Stdout, Document{})
 	})
 
 	t.Run("Basic", func(t *testing.T) {
-		HTMLDoc(Document{Title: "Some Title", Content: "<p>hello, world!</p>"})
+		HTMLDoc(os.Stdout, Document{Title: "Some Title", Content: "<p>hello, world!</p>"})
 	})
 }

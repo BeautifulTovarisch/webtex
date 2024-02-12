@@ -9,9 +9,10 @@ package sitebuilder
 
 import (
 	"embed"
-	"fmt"
-	"os"
+	"io"
 	"text/template"
+
+	"github.com/beautifultovarisch/webtex/internal/logger"
 )
 
 const tmplPath = "templates/doc.tmpl"
@@ -24,6 +25,7 @@ func init() {
 	docTemplate = template.Must(template.New("doc").ParseFS(docTemplateFile, tmplPath))
 }
 
+// Href represents a navigation link in a web document.
 type Href struct {
 	Ref     string // Ref is the URI or local reference to the target resource (e.g #heading)
 	Display string // Display is the human readable text displayed to represent the underlying Ref
@@ -38,8 +40,12 @@ type Document struct {
 
 // HTMLDoc produces a complete HTML document with [content] as its body. The
 // [content] is escaped using Go's html templating.
-func HTMLDoc(doc Document) {
-	if err := docTemplate.ExecuteTemplate(os.Stdout, "doc.tmpl", doc); err != nil {
-		fmt.Println(err)
+func HTMLDoc(out io.Writer, doc Document) error {
+	if err := docTemplate.ExecuteTemplate(out, "doc.tmpl", doc); err != nil {
+		logger.Error("Error rendering HTML: %s", err)
+
+		return err
 	}
+
+	return nil
 }
