@@ -17,9 +17,11 @@ import (
 
 const tmplPath = "templates/doc.tmpl"
 
-//go:embed templates/doc.tmpl
-var docTemplateFile embed.FS
-var docTemplate *template.Template
+var (
+	//go:embed templates/doc.tmpl
+	docTemplateFile embed.FS
+	docTemplate     *template.Template
+)
 
 func init() {
 	docTemplate = template.Must(template.New("doc").ParseFS(docTemplateFile, tmplPath))

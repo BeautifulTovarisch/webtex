@@ -11,12 +11,17 @@ package render
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/beautifultovarisch/webtex/internal/chunk"
 	"github.com/beautifultovarisch/webtex/internal/logger"
 	"github.com/beautifultovarisch/webtex/internal/mdrender"
 	"github.com/beautifultovarisch/webtex/internal/texrender"
 )
+
+const MAX_ROUTINES = 10
+
+var wg sync.WaitGroup
 
 func renderMd(c chunk.Chunk) string {
 	if c.T != chunk.MD {
@@ -26,35 +31,80 @@ func renderMd(c chunk.Chunk) string {
 	return mdrender.Render(c.Content)
 }
 
-func renderTex(c chunk.Chunk) (string, error) {
-	if c.T == chunk.MD {
-		panic("Implementation error. Expected LaTeX chunk")
+func renderBlock(c chunk.Chunk) (string, error) {
+	if c.T != chunk.BLOCK {
+		panic("Implementation error. Expected LaTeX block")
 	}
 
-	return texrender.Render(c.Content)
+	return texrender.RenderBlock(c.Content)
+}
+
+func renderInline(c chunk.Chunk) (string, error) {
+	if c.T != chunk.INLINE {
+		panic("Implementation error. Expected inline LaTeX")
+	}
+
+	return texrender.RenderInline(c.Content)
+}
+
+func processChunk(idx int, c chunk.Chunk, out []string) {
+	defer wg.Done()
+
+	switch c.T {
+	case chunk.MD:
+		out[idx] = renderMd(c)
+	case chunk.INLINE:
+		return
+	case chunk.BLOCK:
+		svg, err := renderBlock(c)
+		if err != nil {
+			logger.Error("Error rendering TeX: %s", err)
+
+			return
+		}
+
+		out[idx] = svg
+	}
+
+	return
+}
+
+func assembleDoc(out []string) string {
+	var b strings.Builder
+
+	for _, s := range out {
+		b.WriteString(s)
+	}
+
+	return b.String()
 }
 
 // RenderDoc accepts a string containing an individual markdown document and
 // returns an HTML document with the rendered content of [md].
 func RenderDoc(md string) string {
-	var doc strings.Builder
+	// Buffer the number of active goroutines
+	maxRoutines := make(chan struct{}, MAX_ROUTINES)
+	defer close(maxRoutines)
 
 	chunks := chunk.ChunkDoc(md)
 
-	for _, c := range chunks {
-		if c.T == chunk.MD {
-			doc.WriteString(renderMd(c))
-		} else {
-			svg, err := renderTex(c)
-			if err != nil {
-				logger.Error("Error rendering TeX: %s", err)
+	n := len(chunks)
 
-				continue
-			}
+	wg.Add(n)
+	out := make([]string, n)
 
-			doc.WriteString(svg)
-		}
+	// Process chunks concurrently.
+	for i, c := range chunks {
+		go func(i int) {
+			<-maxRoutines
+
+			processChunk(i, c, out)
+		}(i)
+
+		maxRoutines <- struct{}{}
 	}
 
-	return doc.String()
+	wg.Wait()
+
+	return assembleDoc(out)
 }

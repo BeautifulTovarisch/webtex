@@ -18,3 +18,11 @@ func TestSiteNav(t *testing.T) {
 		}
 	})
 }
+
+func TestBuild(t *testing.T) {
+	t.Run("Single", func(t *testing.T) {
+		if err := Build("testdata/source/single", ""); err != nil {
+			t.Errorf("Failed to build site: %s", err)
+		}
+	})
+}
