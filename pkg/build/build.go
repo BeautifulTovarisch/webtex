@@ -2,10 +2,12 @@
 package build
 
 import (
+	// "io"
 	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/beautifultovarisch/webtex/pkg/render"
 
@@ -53,31 +55,72 @@ func SiteNav(file string) (Nav, error) {
 	return nav, nil
 }
 
+// Strip the source file of its extension and produce a path with the desired
+// output extension.
+func outputPath(path string) string {
+	// Should only ever be one
+	return strings.Replace(path, ".md", ".html", 1)
+}
+
+func processDir(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() && path != src {
+			// Mirror the directory structure of the source files.
+			if err := os.MkdirAll(filepath.Join(dst, path), os.ModePerm); err != nil {
+				return err
+			}
+
+			return nil
+		}
+
+		fi, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		if fi.Mode().IsRegular() {
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			doc := sitebuilder.Document{
+				Title:   d.Name(),
+				Content: render.RenderDoc(string(content)),
+			}
+
+			file, err := os.Create(filepath.Join(dst, outputPath(path)))
+			defer file.Close()
+
+			if err != nil {
+				return err
+			}
+
+			if err := sitebuilder.HTMLDoc(file, doc); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
 // Build reads the markdown files under the [src] directory and writes HTML to
-// the [out] directory.
+// the [dst] directory.
 func Build(src string, dst string) error {
 	_, err := SiteNav(src)
 	if err != nil {
 		return err
 	}
 
-	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
+	// Create output directory
+	if err := os.MkdirAll(filepath.Join(dst, src), os.ModePerm); err != nil {
+		return err
+	}
 
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
+	if err := processDir(src, dst); err != nil {
+		return err
+	}
 
-		doc := sitebuilder.Document{
-			Title:   d.Name(),
-			Content: render.RenderDoc(string(content)),
-		}
-
-		sitebuilder.HTMLDoc(os.Stdout, doc)
-
-		return nil
-	})
+	return nil
 }

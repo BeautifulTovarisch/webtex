@@ -28,8 +28,6 @@ func texDoc(tex string) string {
 	b.WriteString(tex)
 	b.WriteString("\\end{document}")
 
-	fmt.Println(b.String())
-
 	return b.String()
 }
 
@@ -55,7 +53,7 @@ func createPDF(tex, dir string) error {
 		return err
 	}
 
-	cmd := exec.Command(pdflatex, "-output-directory", dir)
+	cmd := exec.Command(pdflatex, "-file-line-error", "-output-directory", dir)
 
 	stdin, err := cmd.StdinPipe()
 	defer stdin.Close()

@@ -36,7 +36,7 @@ Vagrant.configure("2") do |config|
   # boxes at https://vagrantcloud.com/search.
   config.vm.box = "ubuntu/noble64"
 
-  config.vm.provision "update", type: "shell", privileged: true, inline: "apt-get update -y"
+  config.vm.provision "update", type: "shell", privileged: true, inline: "apt-get update -y && apt-get dist-upgrade -y"
   config.vm.provision "pdf2svg", type: "shell", privileged: true, inline: "apt-get install -y pdf2svg"
 
   config.vm.provision "go", type: "shell", privileged: false do |s|

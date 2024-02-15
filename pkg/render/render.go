@@ -14,7 +14,6 @@ import (
 	"sync"
 
 	"github.com/beautifultovarisch/webtex/internal/chunk"
-	"github.com/beautifultovarisch/webtex/internal/logger"
 	"github.com/beautifultovarisch/webtex/internal/mdrender"
 	"github.com/beautifultovarisch/webtex/internal/texrender"
 )
@@ -58,8 +57,6 @@ func processChunk(idx int, c chunk.Chunk, out []string) {
 	case chunk.BLOCK:
 		svg, err := renderBlock(c)
 		if err != nil {
-			logger.Error("Error rendering TeX: %s", err)
-
 			return
 		}
 

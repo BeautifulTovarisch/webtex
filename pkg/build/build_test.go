@@ -21,7 +21,33 @@ func TestSiteNav(t *testing.T) {
 
 func TestBuild(t *testing.T) {
 	t.Run("Single", func(t *testing.T) {
-		if err := Build("testdata/source/single", ""); err != nil {
+		tmp := t.TempDir()
+
+		if err := Build("testdata/single", tmp); err != nil {
+			t.Errorf("Failed to build site: %s", err)
+		}
+	})
+
+	t.Run("Small", func(t *testing.T) {
+		tmp := t.TempDir()
+
+		if err := Build("testdata/Calculus/Exponents and Logarithms", tmp); err != nil {
+			t.Errorf("Failed to build site: %s", err)
+		}
+	})
+
+	t.Run("Medium", func(t *testing.T) {
+		tmp := t.TempDir()
+
+		if err := Build("testdata/Calculus/Integration", tmp); err != nil {
+			t.Errorf("Failed to build site: %s", err)
+		}
+	})
+
+	t.Run("Big", func(t *testing.T) {
+		tmp := t.TempDir()
+
+		if err := Build("testdata/Calculus", tmp); err != nil {
 			t.Errorf("Failed to build site: %s", err)
 		}
 	})
