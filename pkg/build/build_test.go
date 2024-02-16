@@ -21,9 +21,9 @@ func TestSiteNav(t *testing.T) {
 
 func TestBuild(t *testing.T) {
 	t.Run("Single", func(t *testing.T) {
-		tmp := t.TempDir()
+		// tmp := t.TempDir()
 
-		if err := Build("testdata/single", tmp); err != nil {
+		if err := Build("testdata/single", "/tmp/_html"); err != nil {
 			t.Errorf("Failed to build site: %s", err)
 		}
 	})

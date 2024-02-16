@@ -89,6 +89,7 @@ func processDir(src, dst string) error {
 				Content: render.RenderDoc(string(content)),
 			}
 
+			// Output file.
 			file, err := os.Create(filepath.Join(dst, outputPath(path)))
 			defer file.Close()
 

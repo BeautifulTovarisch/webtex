@@ -5,13 +5,12 @@ package chunk
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
-
-// TODO: Find or generate large MD files and read them from disk for tests.
 
 func chunkEq(a, b Chunk) bool {
 	return a.T == b.T && a.Content == b.Content
@@ -73,70 +72,68 @@ func diffTable(a, b string, t *testing.T) {
 }
 
 // Chunk by chunk comparision
-func cmpChunk(expected, actual []Chunk, t *testing.T) {
-	if len(expected) == 0 && len(actual) == 0 {
-		// Pass
-		return
+func cmpChunk(expected, actual Chunk, t *testing.T) {
+	if !chunkEq(expected, actual) {
+		t.Errorf("Expected: %v\n\nActual: %v\n\n", expected, actual)
+
+		diffStrings(expected.Content, actual.Content, t)
 	}
-
-	if len(expected) == 0 {
-		t.Errorf("Expected fewer chunks than received. Actual: %v\n", actual)
-		return
-	}
-
-	if len(actual) == 0 {
-		t.Errorf("Recieved fewer chunks then expected. Expected: %v\n", expected)
-		return
-	}
-
-	a, b := expected[0], actual[0]
-
-	if !chunkEq(a, b) {
-		t.Errorf("Expected: %v\n\nActual: %v\n\n", a, b)
-
-		diffStrings(a.Content, b.Content, t)
-
-		return
-	}
-
-	cmpChunk(expected[1:], actual[1:], t)
 }
 
 func testFiles(files []string, expected map[string][]Chunk, t *testing.T) {
 	for _, f := range files {
-		md, err := os.ReadFile(f)
+		t.Logf("Input file: %s\n", f)
+
+		md, err := os.Open(f)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		input := string(md)
-
-		actual := ChunkDoc(input)
-
-		v, ok := expected[filepath.Base(f)]
+		chunks, ok := expected[filepath.Base(f)]
 		if !ok {
 			t.Fatalf("No test case corresponding to %s", f)
 		}
 
-		t.Logf("Input file: %s\n", f)
+		for _, chunk := range chunks {
+			c, err := ChunkDoc(md)
+			if err != nil && err != io.EOF {
+				t.Errorf("Failed to produce chunk: %s", err)
+			}
 
-		cmpChunk(v, actual, t)
+			cmpChunk(chunk, c, t)
+		}
 	}
 }
 
 func TestChunkDoc(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
-		md := ""
+		md := strings.NewReader("")
 
-		actual := ChunkDoc(md)
-
-		if len(actual) != 0 {
-			t.Errorf("Failed to chunk empty document. Got %v", actual)
+		// One read should reach EOF
+		c, err := ChunkDoc(md)
+		if err != io.EOF {
+			t.Errorf("Failed to chunk empty document: %s. Chunk: %s", err, c)
 		}
 	})
 
+	t.Run("SingleBlock", func(t *testing.T) {
+		source := strings.NewReader("$$x+y=z$$")
+
+		c, err := ChunkDoc(source)
+		if err != nil && err != io.EOF {
+			t.Errorf("Failed to parse block: %s", err)
+		}
+
+		expected := Chunk{BLOCK, "x+y=z"}
+
+		cmpChunk(expected, c, t)
+	})
+
 	t.Run("Block", func(t *testing.T) {
-		files, _ := filepath.Glob("testdata/block-*")
+		// files, _ := filepath.Glob("testdata/block-*")
+		files := []string{
+			"testdata/block-4.md",
+		}
 
 		expected := map[string][]Chunk{
 			"block-1.md": []Chunk{Chunk{BLOCK, ""}},

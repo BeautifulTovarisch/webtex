@@ -1,7 +1,7 @@
 package render
 
 import (
-	"os"
+	"io"
 	"testing"
 )
 
@@ -14,6 +14,6 @@ func TestRenderDoc(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		RenderDoc(string(doc))
+		RenderDoc(string(doc), io.Discard)
 	})
 }

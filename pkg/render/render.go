@@ -11,16 +11,11 @@ package render
 
 import (
 	"strings"
-	"sync"
 
 	"github.com/beautifultovarisch/webtex/internal/chunk"
 	"github.com/beautifultovarisch/webtex/internal/mdrender"
 	"github.com/beautifultovarisch/webtex/internal/texrender"
 )
-
-const MAX_ROUTINES = 10
-
-var wg sync.WaitGroup
 
 func renderMd(c chunk.Chunk) string {
 	if c.T != chunk.MD {
@@ -46,62 +41,34 @@ func renderInline(c chunk.Chunk) (string, error) {
 	return texrender.RenderInline(c.Content)
 }
 
-func processChunk(idx int, c chunk.Chunk, out []string) {
-	defer wg.Done()
-
+func processChunk(c chunk.Chunk) (string, error) {
 	switch c.T {
 	case chunk.MD:
-		out[idx] = renderMd(c)
+		return renderMd(c), nil
 	case chunk.INLINE:
-		return
+		return renderInline(c)
 	case chunk.BLOCK:
-		svg, err := renderBlock(c)
-		if err != nil {
-			return
-		}
-
-		out[idx] = svg
+		return renderBlock(c)
 	}
 
-	return
-}
-
-func assembleDoc(out []string) string {
-	var b strings.Builder
-
-	for _, s := range out {
-		b.WriteString(s)
-	}
-
-	return b.String()
+	return "", nil
 }
 
 // RenderDoc accepts a string containing an individual markdown document and
-// returns an HTML document with the rendered content of [md].
-func RenderDoc(md string) string {
-	// Buffer the number of active goroutines
-	maxRoutines := make(chan struct{}, MAX_ROUTINES)
-	defer close(maxRoutines)
+// writes an HTML document with the rendered content of [md] to [out].
+func RenderDoc(md string, out io.Writer) error {
+	var b strings.Builder
 
 	chunks := chunk.ChunkDoc(md)
 
-	n := len(chunks)
-
-	wg.Add(n)
-	out := make([]string, n)
-
-	// Process chunks concurrently.
-	for i, c := range chunks {
-		go func(i int) {
-			<-maxRoutines
-
-			processChunk(i, c, out)
-		}(i)
-
-		maxRoutines <- struct{}{}
+	// We can stream the output of processChunk directly to out.
+	for _, c := range chunks {
+		if svg, err := processChunk(c); err != nil {
+			b.WriteString("Error")
+		} else {
+			b.WriteString(svg)
+		}
 	}
 
-	wg.Wait()
-
-	return assembleDoc(out)
+	return b.String()
 }

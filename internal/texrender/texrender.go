@@ -53,21 +53,26 @@ func createPDF(tex, dir string) error {
 		return err
 	}
 
+	// TeX vomits out too much error output to reasonably convert into a Go error
+	// here. Additionally, errors are reported on STDOUT. Attempting to convert a
+	// missing file into an SVG will have to suffice as far for error reporting.
 	cmd := exec.Command(pdflatex, "-file-line-error", "-output-directory", dir)
 
 	stdin, err := cmd.StdinPipe()
-	defer stdin.Close()
-
 	if err != nil {
 		return err
 	}
 
-	// TeX vomits out too much error output to reasonably convert into a Go error
-	// here. Additionally, errors are reported on STDOUT. Attempting to convert a
-	// missing file into an SVG will have to suffice as far for error reporting.
-	fmt.Fprintln(stdin, texDoc(tex))
+	if err := cmd.Start(); err != nil {
+		return err
+	}
 
-	return nil
+	go func() {
+		fmt.Fprintln(stdin, texDoc(tex))
+		stdin.Close()
+	}()
+
+	return cmd.Wait()
 }
 
 func render(tex string) (string, error) {
@@ -75,8 +80,6 @@ func render(tex string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	defer os.RemoveAll(tmp)
 
 	if err := createPDF(tex, tmp); err != nil {
 		return "", err
