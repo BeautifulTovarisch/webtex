@@ -4,6 +4,7 @@ package chunk
 // TODO: Write proper diffing algorithm(s)
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -14,20 +15,6 @@ import (
 
 func chunkEq(a, b Chunk) bool {
 	return a.T == b.T && a.Content == b.Content
-}
-
-func chunksEq(a, b []Chunk) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i, c := range a {
-		if !chunkEq(c, b[i]) {
-			return false
-		}
-	}
-
-	return true
 }
 
 func diffStrings(expected, actual string, t *testing.T) {
@@ -50,27 +37,6 @@ func diffStrings(expected, actual string, t *testing.T) {
 	t.Log(buf.String())
 }
 
-// Extremely poor parameter names...
-func diffTable(a, b string, t *testing.T) {
-	var buf strings.Builder
-
-	n := len(b)
-
-	fmt.Fprintf(&buf, "\n\texp\tact\n")
-
-	for i, c1 := range a {
-		if i < n {
-			if c2 := b[i]; c1 != rune(c2) {
-				// Highlight row as red
-				fmt.Fprintf(&buf, ">")
-				fmt.Fprintf(&buf, "\t%+q\t%+q\n", c1, c2)
-			}
-		}
-	}
-
-	t.Log(buf.String())
-}
-
 // Chunk by chunk comparision
 func cmpChunk(expected, actual Chunk, t *testing.T) {
 	if !chunkEq(expected, actual) {
@@ -84,10 +50,12 @@ func testFiles(files []string, expected map[string][]Chunk, t *testing.T) {
 	for _, f := range files {
 		t.Logf("Input file: %s\n", f)
 
-		md, err := os.Open(f)
+		fd, err := os.Open(f)
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		md := bufio.NewReader(fd)
 
 		chunks, ok := expected[filepath.Base(f)]
 		if !ok {
@@ -96,6 +64,7 @@ func testFiles(files []string, expected map[string][]Chunk, t *testing.T) {
 
 		for _, chunk := range chunks {
 			c, err := ChunkDoc(md)
+
 			if err != nil && err != io.EOF {
 				t.Errorf("Failed to produce chunk: %s", err)
 			}
@@ -107,7 +76,7 @@ func testFiles(files []string, expected map[string][]Chunk, t *testing.T) {
 
 func TestChunkDoc(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
-		md := strings.NewReader("")
+		md := bufio.NewReader(strings.NewReader(""))
 
 		// One read should reach EOF
 		c, err := ChunkDoc(md)
@@ -117,7 +86,7 @@ func TestChunkDoc(t *testing.T) {
 	})
 
 	t.Run("SingleBlock", func(t *testing.T) {
-		source := strings.NewReader("$$x+y=z$$")
+		source := bufio.NewReader(strings.NewReader("$$x+y=z$$"))
 
 		c, err := ChunkDoc(source)
 		if err != nil && err != io.EOF {
@@ -130,10 +99,7 @@ func TestChunkDoc(t *testing.T) {
 	})
 
 	t.Run("Block", func(t *testing.T) {
-		// files, _ := filepath.Glob("testdata/block-*")
-		files := []string{
-			"testdata/block-4.md",
-		}
+		files, _ := filepath.Glob("testdata/block-*")
 
 		expected := map[string][]Chunk{
 			"block-1.md": []Chunk{Chunk{BLOCK, ""}},
@@ -164,7 +130,6 @@ func TestChunkDoc(t *testing.T) {
 			"malformed-1.md": []Chunk{Chunk{BLOCK, "\n\\begin{equation}\n\nMore text\n"}},
 			"malformed-2.md": []Chunk{Chunk{BLOCK, "\\begin{equation}x + y = z\\end{equation}$abc\n"}},
 			"malformed-3.md": []Chunk{
-				// Remember consecutive markdown blocks are merged!
 				Chunk{MD, "$x + y = z $\n$ "},
 				Chunk{INLINE, "100"},
 				Chunk{MD, "\n$x = -b \\pm \\frac {\\sqrt{b^2 - 4ac}} {2a}\n$\n"},
@@ -199,6 +164,34 @@ func TestChunkDoc(t *testing.T) {
 		}
 
 		testFiles(files, expected, t)
+	})
+
+	t.Run("BasicMarkdown", func(t *testing.T) {
+		source := strings.NewReader("# Header")
+		b := bufio.NewReader(source)
+
+		c, err := ChunkDoc(b)
+		if err != nil && err != io.EOF {
+			t.Error(err)
+		}
+
+		cmpChunk(Chunk{MD, "# Header"}, c, t)
+
+		source = strings.NewReader("## Subheader abc $100 $abcdefg$")
+		b = bufio.NewReader(source)
+
+		c, err = ChunkDoc(b)
+		if err != nil && err != io.EOF {
+			t.Error(err)
+		}
+
+		cmpChunk(Chunk{MD, "## Subheader abc "}, c, t)
+
+		c, err = ChunkDoc(b)
+		cmpChunk(Chunk{MD, "$100 "}, c, t)
+
+		c, err = ChunkDoc(b)
+		cmpChunk(Chunk{INLINE, "abcdefg"}, c, t)
 	})
 
 	t.Run("Heterogeneous", func(t *testing.T) {
