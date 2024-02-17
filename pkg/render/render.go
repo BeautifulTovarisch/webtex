@@ -5,12 +5,9 @@
 // rendering the snippets of Markdown and LaTeX into corresponding HTML code
 package render
 
-// TODO: Our chunking strategy potentially allows documents to be streamed.
-// Consider an option to allow documents to be provided to STDIN directly and
-// processed in a pipeline.
-
 import (
-	"strings"
+	"bufio"
+	"io"
 
 	"github.com/beautifultovarisch/webtex/internal/chunk"
 	"github.com/beautifultovarisch/webtex/internal/mdrender"
@@ -56,19 +53,21 @@ func processChunk(c chunk.Chunk) (string, error) {
 
 // RenderDoc accepts a string containing an individual markdown document and
 // writes an HTML document with the rendered content of [md] to [out].
-func RenderDoc(md string, out io.Writer) error {
-	var b strings.Builder
-
-	chunks := chunk.ChunkDoc(md)
+func RenderDoc(md io.Reader, out io.Writer) error {
+	buf := bufio.NewReader(md)
 
 	// We can stream the output of processChunk directly to out.
-	for _, c := range chunks {
-		if svg, err := processChunk(c); err != nil {
-			b.WriteString("Error")
-		} else {
-			b.WriteString(svg)
+	for {
+		c, err := chunk.ChunkDoc(buf)
+		if err != nil {
+			return err
 		}
-	}
 
-	return b.String()
+		html, err := processChunk(c)
+		if err != nil {
+			return err
+		}
+
+		io.WriteString(out, html)
+	}
 }
