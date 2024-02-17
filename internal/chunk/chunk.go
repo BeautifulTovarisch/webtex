@@ -154,7 +154,8 @@ func readInline(tex *bufio.Reader) (Chunk, error) {
 	n := len(content)
 	if n > 1 {
 		if unicode.IsSpace(rune(content[n-2])) {
-			tex.UnreadRune()
+			// Because we use ReadString() above, we cannot use UnreadRune()
+			tex.UnreadByte()
 
 			return Chunk{MD, strings.TrimSuffix("$"+content[:n-1], "$")}, err
 		}
@@ -162,7 +163,7 @@ func readInline(tex *bufio.Reader) (Chunk, error) {
 		return Chunk{INLINE, strings.TrimSuffix(content, "$")}, err
 	}
 
-	return Chunk{}, nil
+	return Chunk{MD, "$" + content}, nil
 }
 
 // Fenced code block delimited with ```
@@ -208,8 +209,6 @@ func lex(md *bufio.Reader) (Chunk, error) {
 	if err != nil {
 		return Chunk{}, err
 	}
-
-	fmt.Println("TYPE: ", t)
 
 	switch t {
 	case BLOCK:
